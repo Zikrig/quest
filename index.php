@@ -250,7 +250,10 @@ function handle_message($user_id, $text, $payload) {
         // Ищем введённый текст среди вариантов ответа
         $matchedIndex = null;
         foreach ($options as $i => $optText) {
-            if (trim($optText) === trim($text)) {
+            // В VK-клавиатуре мы могли обрезать длинные варианты до 35 символов,
+            // поэтому сравниваем именно с тем текстом, который был на кнопке.
+            $label = mb_strlen($optText) > 35 ? mb_substr($optText, 0, 32) . '...' : $optText;
+            if (trim($label) === trim($text)) {
                 $matchedIndex = $i;
                 break;
             }
