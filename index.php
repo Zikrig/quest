@@ -111,15 +111,33 @@ function get_main_menu_keyboard() {
 }
 
 function get_answers_keyboard($options) {
+    // Клавиатура с цифрами 1,2,3... вместо полного текста вариантов
     $buttons = [];
+    $row = [];
+
     foreach ($options as $i => $opt) {
-        // Ограничиваем подпись кнопки 35 символами
-        $label = $opt;
-        $buttons[] = [['action' => ['type' => 'text', 'label' => $label, 'payload' => json_encode(['command' => 'answer', 'index' => $i])]]];
+        $row[] = [
+            'action' => [
+                'type'   => 'text',
+                'label'  => (string)($i + 1),
+                'payload'=> json_encode(['command' => 'answer', 'index' => $i]),
+            ],
+        ];
+
+        // По 4 кнопки в строке
+        if (count($row) === 4) {
+            $buttons[] = $row;
+            $row = [];
+        }
     }
+
+    if (!empty($row)) {
+        $buttons[] = $row;
+    }
+
     return [
         'one_time' => false,
-        'buttons' => $buttons
+        'buttons'  => $buttons,
     ];
 }
 
@@ -268,22 +286,21 @@ function handle_message($user_id, $text, $payload) {
         }
     }
 
-    // 2. Обработка текстового ответа без payload (на случай, если VK не прислал payload,
-    //    но пользователь нажал кнопку и в чате виден только текст варианта)
+    // 2. Обработка текстового ответа без payload (если VK не прислал payload,
+    //    но пользователь нажал кнопку-цифру или ввёл цифру вручную)
     if (!$payload && $session && $session['current_question'] < count($session['questions'])) {
-        $current = $session['current_question'];
+        $current  = $session['current_question'];
         $question = $session['questions'][$current];
-        $options = $question['options'];
+        $options  = $question['options'];
 
-        // Ищем введённый текст среди вариантов ответа
         $matchedIndex = null;
-        foreach ($options as $i => $optText) {
-            // В VK-клавиатуре мы могли обрезать длинные варианты до 35 символов,
-            // поэтому сравниваем именно с тем текстом, который был на кнопке.
-            $label = mb_strlen($optText) > 35 ? mb_substr($optText, 0, 32) . '...' : $optText;
-            if (trim($label) === trim($text)) {
-                $matchedIndex = $i;
-                break;
+        $trimmed = trim($text);
+
+        // Если пользователь прислал цифру 1..N — маппим на индекс
+        if (ctype_digit($trimmed)) {
+            $num = (int)$trimmed;
+            if ($num >= 1 && $num <= count($options)) {
+                $matchedIndex = $num - 1;
             }
         }
 
@@ -310,7 +327,14 @@ function handle_message($user_id, $text, $payload) {
 function ask_question($user_id, $session) {
     $q_idx = $session['current_question'];
     $q = $session['questions'][$q_idx];
-    $message = "Вопрос " . ($q_idx + 1) . ":\n" . $q['question'];
+    // Формируем текст вопроса с нумерованными вариантами:
+    // Чувство наказанности.
+    // 1. ...
+    // 2. ...
+    $message = "Вопрос " . ($q_idx + 1) . ":\n" . $q['question'] . "\n\n";
+    foreach ($q['options'] as $i => $opt) {
+        $message .= ($i + 1) . ". " . $opt . "\n";
+    }
     send_message($user_id, $message, get_answers_keyboard($q['options']));
 }
 
