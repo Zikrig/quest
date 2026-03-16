@@ -107,6 +107,29 @@ function get_show_answers_keyboard() {
     ];
 }
 
+// Клавиатура под результатом теста: "Мои ответы" и "Пройти ещё тесты"
+function get_result_keyboard() {
+    return [
+        'one_time' => false,
+        'buttons' => [
+            [[
+                'action' => [
+                    'type' => 'text',
+                    'label' => 'Мои ответы',
+                    'payload' => json_encode(['command' => 'show_answers'])
+                ]
+            ]],
+            [[
+                'action' => [
+                    'type' => 'text',
+                    'label' => 'Пройти ещё тесты',
+                    'payload' => json_encode(['command' => 'back_to_menu'])
+                ]
+            ]]
+        ]
+    ];
+}
+
 // --- CALLBACK LOGIC ---
 $data = json_decode(file_get_contents('php://input'), true);
 
@@ -202,6 +225,15 @@ function handle_message($user_id, $text, $payload) {
                 send_message($user_id, $response, get_main_menu_keyboard());
                 delete_session($user_id);
                 return;
+
+            case 'back_to_menu':
+                // Завершаем текущую сессию и возвращаем главное меню
+                if ($session) {
+                    delete_session($user_id);
+                }
+                $welcome = "Выберите тест, который хотите пройти.";
+                send_message($user_id, $welcome, get_main_menu_keyboard());
+                return;
         }
     }
 
@@ -234,28 +266,10 @@ function finish_test($user_id, $session) {
         }
     }
 
-    // 1. Отправляем краткий результат
+    // Сохраняем сессию, чтобы потом можно было показать ответы
+    save_session($user_id, $session);
+
+    // Отправляем краткий результат + две кнопки: "Мои ответы" и "Пройти ещё тесты"
     $result_message = "Тест завершен!\nТвой итоговый балл: $score\n\n$interpretation";
-    send_message($user_id, $result_message);
-
-    // 2. Отправляем ответы порциями (чтобы не обрезались длинные сообщения)
-    $chunk = "";
-    $count = count($session['questions']);
-    foreach ($session['questions'] as $i => $q) {
-        if (!isset($session['answers'][$i])) {
-            continue;
-        }
-        $selected = $q['options'][$session['answers'][$i]];
-        $chunk .= "Вопрос " . ($i + 1) . ": " . $q['question'] . "\n";
-        $chunk .= "Ответ: " . $selected . "\n\n";
-
-        // Отправляем по 5 вопросов или в конце списка
-        if ((($i + 1) % 5 === 0) || ($i + 1 === $count)) {
-            send_message($user_id, "Твои ответы:\n\n" . $chunk);
-            $chunk = "";
-        }
-    }
-
-    // 3. В конце предлагаем пройти другой тест и показываем меню
-    send_message($user_id, "Можешь пройти другой тест:", get_main_menu_keyboard());
+    send_message($user_id, $result_message, get_result_keyboard());
 }
