@@ -233,8 +233,15 @@ function finish_test($user_id, $session) {
             break;
         }
     }
-    
-    $result_message = "Тест завершен!\nТвой итоговый балл: $score\n\n$interpretation";
-    send_message($user_id, $result_message, get_show_answers_keyboard());
-    save_session($user_id, $session); // Save session so they can click "Show answers"
+
+    // Формируем сообщение с результатом и всеми ответами
+    $result_message = "Тест завершен!\nТвой итоговый балл: $score\n\n$interpretation\n\nТвои ответы:\n\n";
+    foreach ($session['questions'] as $i => $q) {
+        $selected = $q['options'][$session['answers'][$i]];
+        $result_message .= "Вопрос " . ($i + 1) . ": " . $q['question'] . "\n";
+        $result_message .= "Ответ: " . $selected . "\n\n";
+    }
+
+    // Показываем результат и сразу предлагаем вернуться в меню
+    send_message($user_id, $result_message, get_main_menu_keyboard());
 }
