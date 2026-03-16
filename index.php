@@ -56,8 +56,19 @@ function vk_request($method, $params) {
     $params['access_token'] = $access_token;
     $params['v'] = '5.131';
     
-    $url = 'https://api.vk.com/method/' . $method . '?' . http_build_query($params);
-    $result = file_get_contents($url);
+    $url = 'https://api.vk.com/method/' . $method;
+    
+    $options = [
+        'http' => [
+            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method'  => 'POST',
+            'content' => http_build_query($params),
+        ],
+    ];
+    
+    $context  = stream_context_create($options);
+    $result = file_get_contents($url, false, $context);
+    
     return json_decode($result, true);
 }
 
