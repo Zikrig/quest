@@ -234,11 +234,11 @@ function handle_message($user_id, $text, $payload) {
                 ];
                 save_session($user_id, $session);
 
-                // Отправляем инструкцию вместе с первым вопросом и кнопками
+                // Сначала отправляем инструкцию,
+                // затем задаём первый вопрос через ask_question (с вариантами и клавиатурой)
                 $instruction = $TEST_INSTRUCTIONS[$test_type];
-                $first_question = $questions[0];
-                $msg = $instruction . "\n\nВопрос 1:\n" . $first_question['question'];
-                send_message($user_id, $msg, get_answers_keyboard($first_question['options']));
+                send_message($user_id, $instruction);
+                ask_question($user_id, $session);
 
                 return;
 
