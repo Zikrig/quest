@@ -186,10 +186,13 @@ function handle_message($user_id, $text, $payload) {
                     'questions' => $questions
                 ];
                 save_session($user_id, $session);
-                
+
+                // Отправляем инструкцию вместе с первым вопросом и кнопками
                 $instruction = $TEST_INSTRUCTIONS[$test_type];
-                send_message($user_id, $instruction);
-                ask_question($user_id, $session);
+                $first_question = $questions[0];
+                $msg = $instruction . "\n\nВопрос 1:\n" . $first_question['question'];
+                send_message($user_id, $msg, get_answers_keyboard($first_question['options']));
+
                 return;
 
             case 'answer':
