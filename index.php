@@ -50,6 +50,15 @@ function delete_session($user_id) {
     }
 }
 
+// --- LOGGING ---
+$log_file = __DIR__ . '/bot.log';
+function write_log($title, $data) {
+    global $log_file;
+    $time = date('Y-m-d H:i:s');
+    $content = "[$time] === $title ===\n" . print_r($data, true) . "\n\n";
+    file_put_contents($log_file, $content, FILE_APPEND);
+}
+
 // --- VK API HELPER ---
 function vk_request($method, $params) {
     global $access_token;
@@ -66,10 +75,15 @@ function vk_request($method, $params) {
         ],
     ];
     
+    write_log("OUTGOING REQUEST: $method", $params);
+    
     $context  = stream_context_create($options);
     $result = file_get_contents($url, false, $context);
+    $response = json_decode($result, true);
     
-    return json_decode($result, true);
+    write_log("INCOMING RESPONSE: $method", $response);
+    
+    return $response;
 }
 
 function send_message($user_id, $message, $keyboard = null) {
@@ -142,11 +156,14 @@ function get_result_keyboard() {
 }
 
 // --- CALLBACK LOGIC ---
-$data = json_decode(file_get_contents('php://input'), true);
+$raw_input = file_get_contents('php://input');
+$data = json_decode($raw_input, true);
 
 if (!$data) {
     exit;
 }
+
+write_log("INCOMING CALLBACK", $data);
 
 // Secret key check
 if ($secret_key && (!isset($data['secret']) || $data['secret'] !== $secret_key)) {
