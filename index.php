@@ -88,7 +88,8 @@ function get_main_menu_keyboard() {
 function get_answers_keyboard($options) {
     $buttons = [];
     foreach ($options as $i => $opt) {
-        $label = mb_strlen($opt) > 40 ? mb_substr($opt, 0, 37) . '...' : $opt;
+        // Ограничиваем подпись кнопки 35 символами
+        $label = mb_strlen($opt) > 35 ? mb_substr($opt, 0, 32) . '...' : $opt;
         $buttons[] = [['action' => ['type' => 'text', 'label' => $label, 'payload' => json_encode(['command' => 'answer', 'index' => $i])]]];
     }
     return [
