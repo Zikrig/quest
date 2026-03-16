@@ -206,7 +206,7 @@ function handle_message($user_id, $text, $payload) {
     }
 
     // Default response (menu)
-    $welcome = "Ну что, начнем? Помни, в тестах нет неправильных ответов. Это не экзамен, а инструмент самопознания!";
+    $welcome = "Добрый день! ";
     send_message($user_id, $welcome, get_main_menu_keyboard());
 }
 
@@ -242,6 +242,8 @@ function finish_test($user_id, $session) {
         $result_message .= "Ответ: " . $selected . "\n\n";
     }
 
-    // Показываем результат и сразу предлагаем вернуться в меню
-    send_message($user_id, $result_message, get_main_menu_keyboard());
+    // Сначала отправляем результат без клавиатуры
+    send_message($user_id, $result_message);
+    // Затем отдельно отправляем сообщение с главным меню
+    send_message($user_id, "Можешь пройти другой тест:", get_main_menu_keyboard());
 }
