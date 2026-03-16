@@ -168,6 +168,7 @@ function handle_message($user_id, $text, $payload) {
     
     $session = get_session($user_id);
 
+    // 1. Обработка нажатий по кнопкам (payload)
     if ($payload) {
         switch ($payload['command']) {
             case 'start_test':
@@ -230,7 +231,6 @@ function handle_message($user_id, $text, $payload) {
                 return;
 
             case 'back_to_menu':
-                // Завершаем текущую сессию и возвращаем главное меню
                 if ($session) {
                     delete_session($user_id);
                 }
@@ -240,8 +240,39 @@ function handle_message($user_id, $text, $payload) {
         }
     }
 
-    // Default response (menu)
-    $welcome = "Добрый день! Это бот для проходждения психологических тестов. Выберите тест, который хотите пройти.";
+    // 2. Обработка текстового ответа без payload (на случай, если VK не прислал payload,
+    //    но пользователь нажал кнопку и в чате виден только текст варианта)
+    if (!$payload && $session && $session['current_question'] < count($session['questions'])) {
+        $current = $session['current_question'];
+        $question = $session['questions'][$current];
+        $options = $question['options'];
+
+        // Ищем введённый текст среди вариантов ответа
+        $matchedIndex = null;
+        foreach ($options as $i => $optText) {
+            if (trim($optText) === trim($text)) {
+                $matchedIndex = $i;
+                break;
+            }
+        }
+
+        if ($matchedIndex !== null) {
+            // Эмулируем ту же логику, что и для payload 'answer'
+            $session['answers'][] = $matchedIndex;
+            $session['current_question']++;
+
+            if ($session['current_question'] >= count($session['questions'])) {
+                finish_test($user_id, $session);
+            } else {
+                save_session($user_id, $session);
+                ask_question($user_id, $session);
+            }
+            return;
+        }
+    }
+
+    // 3. Если это не кнопка и не ответ на вопрос — показываем главное меню
+    $welcome = "Добрый день! Это бот для прохождения психологических тестов. Выберите тест, который хотите пройти.";
     send_message($user_id, $welcome, get_main_menu_keyboard());
 }
 
