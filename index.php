@@ -206,7 +206,7 @@ function handle_message($user_id, $text, $payload) {
     }
 
     // Default response (menu)
-    $welcome = "Добрый день! ";
+    $welcome = "Добрый день! Это бот для проходждения психологических тестов. Выберите тест, который хотите пройти.";
     send_message($user_id, $welcome, get_main_menu_keyboard());
 }
 
@@ -234,16 +234,28 @@ function finish_test($user_id, $session) {
         }
     }
 
-    // Формируем сообщение с результатом и всеми ответами
-    $result_message = "Тест завершен!\nТвой итоговый балл: $score\n\n$interpretation\n\nТвои ответы:\n\n";
+    // 1. Отправляем краткий результат
+    $result_message = "Тест завершен!\nТвой итоговый балл: $score\n\n$interpretation";
+    send_message($user_id, $result_message);
+
+    // 2. Отправляем ответы порциями (чтобы не обрезались длинные сообщения)
+    $chunk = "";
+    $count = count($session['questions']);
     foreach ($session['questions'] as $i => $q) {
+        if (!isset($session['answers'][$i])) {
+            continue;
+        }
         $selected = $q['options'][$session['answers'][$i]];
-        $result_message .= "Вопрос " . ($i + 1) . ": " . $q['question'] . "\n";
-        $result_message .= "Ответ: " . $selected . "\n\n";
+        $chunk .= "Вопрос " . ($i + 1) . ": " . $q['question'] . "\n";
+        $chunk .= "Ответ: " . $selected . "\n\n";
+
+        // Отправляем по 5 вопросов или в конце списка
+        if ((($i + 1) % 5 === 0) || ($i + 1 === $count)) {
+            send_message($user_id, "Твои ответы:\n\n" . $chunk);
+            $chunk = "";
+        }
     }
 
-    // Сначала отправляем результат без клавиатуры
-    send_message($user_id, $result_message);
-    // Затем отдельно отправляем сообщение с главным меню
+    // 3. В конце предлагаем пройти другой тест и показываем меню
     send_message($user_id, "Можешь пройти другой тест:", get_main_menu_keyboard());
 }
